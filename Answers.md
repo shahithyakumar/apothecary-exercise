@@ -113,10 +113,10 @@ Any user visiting `http://localhost:4000/potion/4` will be **automatically redir
 ---
 ---
 ---
-## **3. Action Reuse Vulnerability in User Bio Update**
+# **Action Reuse Vulnerability in User Bio Update**
 An **Action Reuse Vulnerability** was identified in the **User Bio Update feature** of the **Settings** page. The application incorrectly allows user bio updates via both `POST` and `GET` requests, making it vulnerable to unintended modifications.
 
-### **Vulnerability Details:**
+## **Vulnerability Details:**
 When a user updates their bio via the settings page, the request is expected to be a `POST` request:
 ```
 POST /users/settings/edit_bio
@@ -127,7 +127,7 @@ GET /users/settings/edit_bio?user[bio]=SpidermanIsTheBest
 ```
 The bio gets updated without requiring form submission, violating secure API design principles.
 
-### **Remediation:**
+## **Remediation:**
 1. **Restrict Updates to POST Requests**.
 2. **Use Proper Authentication & Authorization Checks**.
 
