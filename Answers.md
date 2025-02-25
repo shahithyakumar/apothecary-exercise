@@ -1,16 +1,18 @@
-# SQL Injection Vulnerability in Search Box
+# Vulnerabilities Found
 
-## **Vulnerability Overview**
+## SQL Injection Vulnerability in Search Box
+
+### **Overview**
 A critical **SQL Injection** vulnerability was identified in the **Apothecary Shop** application. This vulnerability allows an attacker to manipulate database queries through unsanitized user input, leading to unauthorized data retrieval and potential database compromise. The issue is particularly severe as **no authentication is required** to exploit it.
 
-## **Vulnerability Details**
+### **Vulnerability Details**
 The application fails to properly sanitize user-supplied input in the **"name"** parameter of HTTP requests. This allows attackers to inject arbitrary **SQL queries**, which the backend executes.
 
 SQL Injection occurs when user input is concatenated directly into a SQL query without proper escaping or parameterization. In this case, when a user provides input via the **name** parameter, the application constructs a SQL query dynamically. An attacker can inject **malicious SQL payloads** to alter query logic, extract sensitive data, or even modify the database contents.
 
 This flaw is present in routes that accept user input without validation, making the system vulnerable to **SQL injection attacks**.
 
-## **Impact**
+### **Impact**
 - **Data Exposure**: Attackers can retrieve sensitive user and system data.
 - **Data Manipulation**: Unauthorized users may modify, insert, or delete records.
 - **Privilege Escalation**: Depending on database permissions, attackers may gain higher access rights.
@@ -19,8 +21,8 @@ This flaw is present in routes that accept user input without validation, making
 
 Given that authentication is **not required** to exploit this vulnerability, the risk is significantly increased.
 
-## **Proof of Concept (PoC)**
-### **Valid Request:**
+### **Proof of Concept**
+#### **Valid Request:**
 ```
 GET /?name=test HTTP/1.1
 Host: localhost:4000
@@ -29,7 +31,7 @@ Cookie: _apothecary_key=<session_token>
 ```
 This request returns normal application responses.
 
-### **Exploitable Request:**
+#### **Exploitable Request:**
 ```
 GET /?name=test%27+OR+1%3D1%3B-- HTTP/1.1
 Host: localhost:4000
@@ -42,26 +44,25 @@ test' OR 1=1;--
 ```
 By injecting `OR 1=1`, an attacker forces the SQL query to always return **true**, potentially exposing all records from the database.
 
-## **Remediation**
+### **Remediation**
 1. **Use Parameterized Queries**
    - Replace dynamic SQL queries with **parameterized queries**.
 2. **Input Validation & Sanitization**
    - Restrict input characters and validate expected formats to prevent SQL manipulation.
 ---
 ---
----
----
-# Cross-Site Scripting (XSS) Vulnerability in Review Submission Feature
 
-## **Vulnerability Overview**
+## Cross-Site Scripting (XSS) Vulnerability in Review Submission Feature
+
+### **Overview**
 A **Cross-Site Scripting (XSS)** vulnerability was identified in the **review submission feature** of the **Apothecary Shop** application. The application does not properly sanitize user input in the review section, allowing an attacker to inject **malicious payloads**. This script executes when a user visits an affected potion’s review page, leading to **phishing, credential theft, session hijacking, and user redirection to malicious websites**.
 
-## **Vulnerability Details**
+### **Vulnerability Details**
 The vulnerability is present in the **review input box** when submitting a potion review. The application does not sanitize or encode **HTML characters**, allowing an attacker to insert **arbitrary JavaScript code**.
 
 When a user submits a review, the text is rendered on the page **without escaping special characters**. This allows an attacker to execute JavaScript in the context of a victim's browser.
 
-## **Steps to Reproduce**
+### **Steps to Reproduce**
 1. Navigate to `http://localhost:4000/potion/4`, which displays reviews for potion **#4**.
 2. Submit a normal review (e.g., `"Test"`) to confirm functionality.
 3. Submit a review with **HTML tags** (e.g., `<i>TestItalics</i>`). The text is displayed in italics, confirming that HTML is **not being sanitized**.
@@ -71,13 +72,13 @@ When a user submits a review, the text is rendered on the page **without escapin
    ```
 5. Now, when any user visits `http://localhost:4000/potion/4`, they are **automatically redirected** to `google.com` or any malicious site.
 
-## **Impact**
+### **Impact**
 - **Phishing Attacks**: Attackers can inject forms or redirect users to fake login pages.
 - **Session Hijacking**: If cookies are not secured properly, an attacker can steal session tokens.
 - **Malware Distribution**: Users can be redirected to malicious sites hosting malware.
 
-## **Proof of Concept (PoC)**
-### **Valid Review Submission:**
+### **Proof of Concept**
+#### **Valid Review Submission:**
 ```
 POST /potion/review/4 HTTP/1.1
 Host: localhost:4000
@@ -86,7 +87,7 @@ Content-Type: application/x-www-form-urlencoded
 review[body]=Test&review[score]=5&review[email]=shahithya@shahithya.com
 ```
 
-### **Malicious XSS Payload Submission:**
+#### **Malicious XSS Payload Submission:**
 ```
 POST /potion/review/4 HTTP/1.1
 Host: localhost:4000
@@ -97,7 +98,7 @@ review[body]=<script>window.location.replace("http://google.com");</script>&revi
 **Result:**  
 Any user visiting `http://localhost:4000/potion/4` will be **automatically redirected** to `google.com` or any attacker-controlled site.
 
-## **Remediation**
+### **Remediation**
 1. **Sanitize user input**:
    - Use libraries like **`html_sanitize_ex`** in Elixir to filter out scripts.
 2. **Escape output before rendering**
@@ -111,12 +112,10 @@ Any user visiting `http://localhost:4000/potion/4` will be **automatically redir
    - Prevents JavaScript from accessing sensitive session cookies.
 ---
 ---
----
----
-# **Action Reuse Vulnerability in User Bio Update**
+## **Action Reuse Vulnerability in User Bio Update**
 An **Action Reuse Vulnerability** was identified in the **User Bio Update feature** of the **Settings** page. The application incorrectly allows user bio updates via both `POST` and `GET` requests, making it vulnerable to unintended modifications.
 
-## **Vulnerability Details:**
+### **Vulnerability Details:**
 When a user updates their bio via the settings page, the request is expected to be a `POST` request:
 ```
 POST /users/settings/edit_bio
@@ -127,8 +126,122 @@ GET /users/settings/edit_bio?user[bio]=SpidermanIsTheBest
 ```
 The bio gets updated without requiring form submission, violating secure API design principles.
 
-## **Remediation:**
+### **Remediation:**
 1. **Restrict Updates to POST Requests**.
 2. **Use Proper Authentication & Authorization Checks**.
+---
+---
+---
+---
+# Remediation for Identified Vulnerabilities
 
+## Action Reuse Vulnerability
+
+### Issue
+I identified an issue in the `router.ex` file that allows for action reuse. The problematic lines in `apothecary-exercise\lib\apothecary_web\router.ex` were:
+
+```elixir
+get "/users/settings/edit_bio", UserSettingsController, :edit_bio
+post "/users/settings/edit_bio", UserSettingsController, :edit_bio
+```
+
+Both `GET` and `POST` requests were mapped to the same `edit_bio` action, which could lead to unintended consequences, such as CSRF or replay attacks.
+
+### Remediation
+To fix this, I removed the `GET` route and retained only the `POST` route:
+
+```elixir
+post "/users/settings/edit_bio", UserSettingsController, :edit_bio
+```
+
+After making this change, action reuse was no longer possible.
+
+## Cross-Site Scripting (XSS) Vulnerability
+
+### Issue
+The application was rendering user-generated content without sanitization, leading to an XSS vulnerability. Specifically, I found this issue in the file `apothecary-exercise\lib\apothecary_web\templates\potion\show.html.heex` on line 19:
+
+```elixir
+<div><%= raw review.body %></div>
+```
+
+Using `raw` directly means that any user input is rendered without encoding, allowing attackers to inject arbitrary JavaScript.
+
+### Remediation
+To prevent XSS, I replaced `raw review.body` with Phoenix's built-in HTML escaping function:
+
+```elixir
+<div><%= Phoenix.HTML.html_escape(review.body) %></div>
+```
+
+After implementing this, I was no longer able to execute XSS payloads in the review box.
+
+---
+---
+---
+---
+
+# Implementing a SAST Tool in the CI Pipeline
+
+To automatically detect these vulnerabilities as part of the CI pipeline, we can leverage static application security testing (SAST) tools.
+
+- If **GitHub Advanced Security (GHAS)** is enabled, we can use **CodeQL** to scan the JavaScript code in the repository whenever a push or merge occurs.
+- Since CodeQL does not support Elixir, we can use **Sobelow**, a static analysis tool for Elixir security.
+- The pipeline will need two separate GitHub Actions workflows: one for JavaScript using CodeQL and another for Elixir using Sobelow.
+
+Here’s a sample **GitHub Actions YAML configuration** to integrate both tools:
+
+```yaml
+name: SAST Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  codeql_scan:
+    name: CodeQL Analysis (JavaScript)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  sobelow_scan:
+    name: Sobelow Analysis (Elixir)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.14'
+          otp-version: '25'
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Run Sobelow Security Scan
+        run: mix sobelow --exit
+```
+
+This pipeline ensures that:
+- CodeQL scans JavaScript files for vulnerabilities.
+- Sobelow scans Elixir files for security issues.
+- Both scans run on every push and pull request to the `main` branch.
+
+By integrating these tools into the CI/CD pipeline, we can proactively detect security vulnerabilities before they reach production.
 
