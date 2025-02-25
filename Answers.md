@@ -47,24 +47,10 @@ By injecting `OR 1=1`, an attacker forces the SQL query to always return **true*
    - Replace dynamic SQL queries with **parameterized queries**.
 2. **Input Validation & Sanitization**
    - Restrict input characters and validate expected formats to prevent SQL manipulation.
-3. **Implement Least Privilege Principle**
-   - Ensure database users have **only necessary permissions** to limit the impact of exploitation.
-4. **Deploy Web Application Firewall (WAF)**
-   - Use a **WAF** to detect and block SQL injection attempts.
-5. **Security Audits & Penetration Testing**
-   - Conduct **regular security assessments** to identify vulnerabilities early.
-
 ---
 ---
 ---
 ---
-
-
-
-
-
-
-
 # Cross-Site Scripting (XSS) Vulnerability in Review Submission Feature
 
 ## **Vulnerability Overview**
@@ -123,4 +109,26 @@ Any user visiting `http://localhost:4000/potion/4` will be **automatically redir
      ```
 4. **Use HTTPOnly and Secure cookies**:
    - Prevents JavaScript from accessing sensitive session cookies.
+---
+---
+---
+---
+## **3. Action Reuse Vulnerability in User Bio Update**
+An **Action Reuse Vulnerability** was identified in the **User Bio Update feature** of the **Settings** page. The application incorrectly allows user bio updates via both `POST` and `GET` requests, making it vulnerable to unintended modifications.
+
+### **Vulnerability Details:**
+When a user updates their bio via the settings page, the request is expected to be a `POST` request:
+```
+POST /users/settings/edit_bio
+```
+However, by simply changing the request method to `GET` and appending the `user[bio]` parameter from the POST request body to the URL:
+```
+GET /users/settings/edit_bio?user[bio]=SpidermanIsTheBest
+```
+The bio gets updated without requiring form submission, violating secure API design principles.
+
+### **Remediation:**
+1. **Restrict Updates to POST Requests**.
+2. **Use Proper Authentication & Authorization Checks**.
+
 
